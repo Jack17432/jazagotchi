@@ -1,17 +1,10 @@
 #[allow(dead_code)]
-
-mod apa102;
-mod tft;
-
 use esp_idf_svc::hal::gpio::PinDriver;
-use esp_idf_svc::hal::spi::{config, SpiDeviceDriver, SpiDriverConfig, SPI1};
-use esp_idf_svc::hal::{delay::FreeRtos, peripherals::Peripherals, spi};
+use esp_idf_svc::hal::{delay::FreeRtos, peripherals::Peripherals};
 use esp_idf_svc::log::EspLogger;
 use esp_idf_svc::sys;
-use crate::apa102::{APA102, Brightness, LEDState};
-
-const PIN_APA102_CLK: u32 = 45;
-const PIN_APA102_DO: u32 = 42;
+use jazagotchi::apa102::{Brightness, LEDState, APA102};
+use jazagotchi::device::{DevicePowerState, PowerToggle};
 
 fn main() -> anyhow::Result<()> {
     sys::link_patches();
@@ -30,17 +23,19 @@ fn main() -> anyhow::Result<()> {
     //     }).unwrap();
 
     let peripherals = Peripherals::take().unwrap();
+
+    let pwr_pin = PinDriver::output(peripherals.pins.gpio46).unwrap();
+    let mut power_controller = DevicePowerState::new(pwr_pin).unwrap();
+    power_controller.wake().unwrap();
+
     let spi_clk = PinDriver::output(peripherals.pins.gpio45).unwrap();
     let spi_do = PinDriver::output(peripherals.pins.gpio42).unwrap();
-    let mut pin_pwr = PinDriver::output(peripherals.pins.gpio46).unwrap();
-    pin_pwr.set_high().unwrap();
-    
     let mut leds = APA102::new(7, spi_clk, spi_do);
-    
+
     loop {
         log::info!("Hello From Main");
         FreeRtos::delay_ms(2000);
-        
+
         let led = LEDState {
             brightness: Brightness::MAX,
             red: 0,

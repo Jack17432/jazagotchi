@@ -42,13 +42,13 @@ impl<'d, 'l, P1: Pin, P2: Pin> APA102<'d, 'l, P1, P2> {
         pin_clk: PinDriver<'d, P1, Output>,
         pin_do: PinDriver<'l, P2, Output>,
     ) -> Self {
-        let led = LEDState{
+        let led = LEDState {
             brightness: Brightness::OFF,
             red: 0,
             green: 0,
             blue: 0,
         };
-        
+
         Self {
             pin_clk,
             pin_do,
@@ -61,13 +61,13 @@ impl<'d, 'l, P1: Pin, P2: Pin> APA102<'d, 'l, P1, P2> {
 
         self.send_led_states()
     }
-    
+
     pub fn set_led_array(&mut self, leds: Vec<LEDState>) -> Result<(), EspError> {
         self.led_states = leds;
-        
+
         self.send_led_states()
     }
-    
+
     fn send_led_states(&mut self) -> Result<(), EspError> {
         self.send_start_of_frame()?;
         for idx in 0..self.led_states.len() {
@@ -75,7 +75,7 @@ impl<'d, 'l, P1: Pin, P2: Pin> APA102<'d, 'l, P1, P2> {
             self.send_led_frame(&led)?;
         }
         self.send_end_of_frame()?;
-        
+
         Ok(())
     }
 
@@ -92,21 +92,21 @@ impl<'d, 'l, P1: Pin, P2: Pin> APA102<'d, 'l, P1, P2> {
         // Needs to send 32 bits set to 0 to start a frame
         for _ in 0..4 {
             self.send_byte(0u8)?;
-        };
+        }
 
         Ok(())
     }
 
     fn send_end_of_frame(&mut self) -> Result<(), EspError> {
         /* As we have learned above, the only function of the “End frame” is to supply
-            strings up to 64 LEDs. This was first pointed out by Bernd in a comment. It
-            should not matter, whether the end frame consists of ones or zeroes. Just
-            don’t mix them.
-         */
+           strings up to 64 LEDs. This was first pointed out by Bernd in a comment. It
+           should not matter, whether the end frame consists of ones or zeroes. Just
+           don’t mix them.
+        */
 
         for _ in 0..(self.led_states.len() / 16) {
             self.send_byte(1u8)?;
-        };
+        }
 
         Ok(())
     }
@@ -118,7 +118,7 @@ impl<'d, 'l, P1: Pin, P2: Pin> APA102<'d, 'l, P1, P2> {
             self.pin_do.set_level(level)?;
             self.pin_clk.toggle()?;
             self.pin_clk.toggle()?;
-        };
+        }
 
         Ok(())
     }
