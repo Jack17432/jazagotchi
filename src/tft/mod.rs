@@ -114,7 +114,6 @@ pub mod commands {
     }
 }
 
-
 struct TFT<S> {
-    _state: PhantomData<S>
+    _state: PhantomData<S>,
 }

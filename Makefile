@@ -1,6 +1,5 @@
 build:
-	. ~/export-esp.sh && \
-		cargo build
+	cargo build
 
 flash:
 	espflash flash target/jazagotchi/debug/jazagotchi
