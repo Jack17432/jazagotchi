@@ -55,7 +55,7 @@ impl<'d, 'l, P1: Pin, P2: Pin> RotaryEncoder<'d, 'l, P1, P2> {
             position_ext_time_prev: SystemTime::now(),
         };
         encoder.prev_state = encoder.poll_state();
-        
+
         encoder
     }
 
@@ -78,12 +78,14 @@ impl<'d, 'l, P1: Pin, P2: Pin> RotaryEncoder<'d, 'l, P1, P2> {
             LatchMode::TWO3 => self.position_ext = (self.position_int >> 1) as f64,
         };
     }
-    
+
     pub fn get_duration(&self) -> Duration {
-        self.position_ext_time.duration_since(self.position_ext_time_prev).unwrap_or_else(|err| {
-            log::error!("Failed to get duration between rotations, {}", err);
-            Duration::from_secs(0)
-        })
+        self.position_ext_time
+            .duration_since(self.position_ext_time_prev)
+            .unwrap_or_else(|err| {
+                log::error!("Failed to get duration between rotations, {}", err);
+                Duration::from_secs(0)
+            })
     }
 
     fn poll_state(&self) -> u8 {
