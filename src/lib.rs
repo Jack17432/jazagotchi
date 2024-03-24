@@ -7,8 +7,8 @@ pub mod tft;
 
 pub fn level_into_u8(level: Level) -> u8 {
     if level == Level::High {
-        return 1u8
+        return 1u8;
     }
-    
+
     0u8
 }
