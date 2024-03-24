@@ -1,6 +1,9 @@
-use crate::level_into_u8;
+use std::cmp::PartialEq;
+use crate::{EventSet, level_into_u8, level_to_bool};
 use esp_idf_svc::hal::gpio::{Input, Pin, PinDriver};
 use std::time::{Duration, SystemTime, SystemTimeError};
+
+// TODO!: Make it work better cuz dosn't work that well.
 
 pub enum LatchMode {
     FOUR3 = 1, // 4 steps, Latch at position 3 only (compatible to older versions)
@@ -23,11 +26,35 @@ pub struct RotaryEncoder<'d, 'l, P1: Pin, P2: Pin> {
     mode: LatchMode,
     prev_state: u8,
 
-    position_int: i8,
-    position_ext: f64,
-    position_ext_prev: f64,
+    position: i8,
+    position_ext: i8,
+    position_ext_prev: i8,
     position_ext_time: SystemTime,
     position_ext_time_prev: SystemTime,
+}
+
+#[derive(PartialEq, Copy)]
+pub enum REEventSet {
+    None = 0,
+    PinChanged = 1, 
+}
+
+impl REEventSet {
+    fn to_int(&self) -> u32 {
+        *self as u32
+    }
+}
+
+impl EventSet for REEventSet {
+    fn is_none(&self) -> bool {
+        *self == REEventSet::None
+    }
+}
+
+impl PartialEq<u32> for REEventSet {
+    fn eq(&self, other: &u32) -> bool {
+        self.to_int() == *other
+    }
 }
 
 /// positions: [3] 1 0 2 [3] 1 0 2 [3]
@@ -37,6 +64,10 @@ pub struct RotaryEncoder<'d, 'l, P1: Pin, P2: Pin> {
 const ENCODER_DIRECTION: [i8; 4 * 4] = [0, -1, 1, 0, 1, 0, 0, -1, -1, 0, 0, 1, 0, 1, -1, 0];
 
 impl<'d, 'l, P1: Pin, P2: Pin> RotaryEncoder<'d, 'l, P1, P2> {
+    fn poll_state(&self) -> u8 {
+        level_into_u8(self.pin_a.get_level()) | level_into_u8(self.pin_b.get_level()) << 1
+    }
+
     pub fn new(
         pin_a: PinDriver<'d, P1, Input>,
         pin_b: PinDriver<'l, P2, Input>,
@@ -48,9 +79,9 @@ impl<'d, 'l, P1: Pin, P2: Pin> RotaryEncoder<'d, 'l, P1, P2> {
             mode,
             prev_state: 0,
 
-            position_int: 0i8,
-            position_ext: 0f64,
-            position_ext_prev: 0f64,
+            position: 0i8,
+            position_ext: 0i8,
+            position_ext_prev: 0i8,
             position_ext_time: SystemTime::now(),
             position_ext_time_prev: SystemTime::now(),
         };
@@ -66,16 +97,15 @@ impl<'d, 'l, P1: Pin, P2: Pin> RotaryEncoder<'d, 'l, P1, P2> {
             return;
         }
 
-        self.position_int += ENCODER_DIRECTION[(self.prev_state | (curr_state << 2)) as usize];
+        self.position += ENCODER_DIRECTION[(self.prev_state | (curr_state << 2)) as usize];
         self.prev_state = curr_state;
 
         self.position_ext_time_prev = self.position_ext_time;
         self.position_ext_time = SystemTime::now();
 
         match &self.mode {
-            LatchMode::FOUR0 => self.position_ext = (self.position_int >> 2) as f64,
-            LatchMode::FOUR3 => self.position_ext = (self.position_int >> 2) as f64,
-            LatchMode::TWO3 => self.position_ext = (self.position_int >> 1) as f64,
+            LatchMode::FOUR0 | LatchMode::FOUR3 => self.position_ext = self.position >> 2,
+            LatchMode::TWO3 => self.position_ext = self.position >> 1,
         };
     }
 
@@ -88,7 +118,45 @@ impl<'d, 'l, P1: Pin, P2: Pin> RotaryEncoder<'d, 'l, P1, P2> {
             })
     }
 
-    fn poll_state(&self) -> u8 {
-        level_into_u8(self.pin_a.get_level()) | level_into_u8(self.pin_b.get_level()) << 1
+    pub fn get_rpm(&self) -> f64 {
+        let milli_sec = self.get_duration().as_millis() as f64;
+        60_000f64 / (milli_sec * 20f64)
+    }
+
+    pub fn get_position(&self) -> i8 {
+        self.position_ext
+    }
+
+    pub fn get_direction(&self) -> Direction {
+        let mut result = Direction::NoRotation;
+
+        if self.position_ext_prev > self.position_ext {
+            result = Direction::Clockwise;
+        } else if self.position_ext_prev < self.position_ext {
+            result = Direction::CounterClockwise;
+        }
+
+        result
+    }
+
+    pub fn get_pin_state(&self) -> (bool, bool) {
+        (
+            level_to_bool(self.pin_a.get_level()),
+            level_to_bool(self.pin_b.get_level()),
+        )
+    }
+
+    pub fn set_position(&mut self, new_position: i8) {
+        match self.mode {
+            LatchMode::FOUR0 | LatchMode::FOUR3 => {
+                self.position = (new_position << 2) | (self.position & 0x03)
+            }
+            LatchMode::TWO3 => self.position = (new_position << 1) | (self.position & 0x01),
+        };
+
+        self.position_ext = new_position;
+        self.position_ext_prev = new_position;
     }
 }
+
+pub fn encoder_events<P1: Pin, P2: Pin>(_: RotaryEncoder<P1, P2>) {}
