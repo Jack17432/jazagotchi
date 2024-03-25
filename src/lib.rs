@@ -25,10 +25,9 @@ pub trait Events<ES>
 where
     ES: PartialEq,
 {
-    fn set(event: ES) -> Result<(), ()>;
+    fn set(event: ES);
     fn is_set(&self, event: ES) -> bool;
 
-    fn wait_for_any(&self) -> ES;
-    fn wait_for_set(&self, events: ES) -> ES;
-    fn wait_for_all(&self) -> ES;
+    fn wait_for_any(&self) -> Self;
+    fn wait_for_all(&self);
 }
