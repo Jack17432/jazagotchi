@@ -25,6 +25,7 @@ pub enum Direction {
 pub struct EncoderData {
     mode: LatchMode,
 
+    range: (i8, i8),
     position: i8,
     position_ext: i8,
     position_ext_prev: i8,
@@ -43,6 +44,7 @@ impl Default for EncoderData {
         Self {
             mode: Default::default(),
 
+            range: (-100, 100),
             position: Default::default(),
             position_ext: Default::default(),
             position_ext_prev: Default::default(),
@@ -74,7 +76,6 @@ const ENCODER_DIRECTION: [i8; 4 * 4] = [
 impl RotaryEncoder {
     fn poll_state(&self) -> u8 {
         let val = level_into_u8(self.pin_a.get_level()) | level_into_u8(self.pin_b.get_level()) << 1;
-        log::info!("pin state, {}", val);
         val
     }
 
@@ -82,6 +83,7 @@ impl RotaryEncoder {
         pin_a: PinDriver<'static, AnyInputPin, Input>,
         pin_b: PinDriver<'static, AnyInputPin, Input>,
         mode: LatchMode,
+        range: (i8, i8),
     ) -> Self {
         let mut encoder = Self {
             pin_a,
@@ -90,7 +92,8 @@ impl RotaryEncoder {
 
             data: EncoderData {
                 mode,
-                position: 0i8,
+                range,
+                position: (range.0 + range.1) / 2i8,
                 position_ext: 0i8,
                 position_ext_prev: 0i8,
                 position_ext_time: SystemTime::now(),
@@ -109,7 +112,15 @@ impl RotaryEncoder {
             return;
         }
 
-            self.data.position += ENCODER_DIRECTION[(self.prev_state | (curr_state << 2)) as usize];
+        self.data.position += ENCODER_DIRECTION[(self.prev_state | (curr_state << 2)) as usize];
+        
+        if self.data.range.0 > self.data.position >> 1 {
+            self.data.position = self.data.range.1 << 2;
+        }
+        else if self.data.range.1 < self.data.position >> 2 {
+            self.data.position = self.data.range.0 << 1;
+        }
+
         self.prev_state = curr_state;
 
         self.data.position_ext_time_prev = self.data.position_ext_time;

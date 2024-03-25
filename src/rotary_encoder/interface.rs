@@ -120,7 +120,7 @@ pub fn init_rotary_encoder(
         pin_b.subscribe(on_pin_trigger).unwrap();
     }
 
-    let encoder = RotaryEncoder::new(pin_a, pin_b, LatchMode::TWO3);
+    let encoder = RotaryEncoder::new(pin_a, pin_b, LatchMode::TWO3, (-7, 0));
 
     std::thread::Builder::new()
         .name("encoder_event_interface".into())

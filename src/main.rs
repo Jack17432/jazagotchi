@@ -44,7 +44,6 @@ fn main() -> anyhow::Result<()> {
     button.enable_interrupt().unwrap();
 
     loop {
-        // log::info!("Hello From Main");
         _ = button.enable_interrupt();
 
         match ROTARY_ENCODER.read() {
