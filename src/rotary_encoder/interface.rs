@@ -1,12 +1,10 @@
 use crate::rotary_encoder::{EncoderData, LatchMode, RotaryEncoder};
 use crate::{EventSet, Events};
 use esp_idf_svc::hal::delay::FreeRtos;
-use esp_idf_svc::hal::gpio::{AnyInputPin, Input, InputPin, InterruptType, Pin, PinDriver};
-use esp_idf_svc::hal::prelude::Peripherals;
+use esp_idf_svc::hal::gpio::{AnyInputPin, Input, InterruptType, Pin, PinDriver};
 use once_cell::sync::Lazy;
 use std::sync::atomic::{AtomicU32, Ordering};
 use std::sync::RwLock;
-use std::time::{Duration, SystemTime};
 
 #[derive(Copy, Clone)]
 pub enum REEventSet {
@@ -15,21 +13,12 @@ pub enum REEventSet {
 }
 
 impl PartialEq<REEventSet> for REEventSet {
-    fn eq(&self, other: &REEventSet) -> bool {
+    fn eq(&self, other: &Self) -> bool {
         self.to_bit() == other.to_bit()
     }
 
-    fn ne(&self, other: &REEventSet) -> bool {
+    fn ne(&self, other: &Self) -> bool {
         self.to_bit() != other.to_bit()
-    }
-}
-
-impl REEventSet {
-    fn to_int(&self) -> u32 {
-        *self as u32
-    }
-    fn to_bit(&self) -> u32 {
-        1 << self.to_int()
     }
 }
 
@@ -39,11 +28,19 @@ impl EventSet for REEventSet {
     fn is_none(&self) -> bool {
         *self == REEventSet::None
     }
+
+    fn to_int(&self) -> u32 {
+        *self as u32
+    }
+    fn to_bit(&self) -> u32 {
+        1 << self.to_int()
+    }
 }
 
 struct REEvents(AtomicU32);
 
 impl Events<REEventSet> for REEvents {
+    // TODO!: Turn this into a macro to setup
     fn set(event: REEventSet) {
         let curr_events = ROTARY_EVENTS.0.load(Ordering::Relaxed);
         ROTARY_EVENTS
@@ -77,7 +74,7 @@ impl PartialEq<u32> for REEventSet {
     }
 }
 
-fn encoder_events(mut encoder: RotaryEncoder) -> ! {
+fn encoder_task(mut encoder: RotaryEncoder) -> ! {
     loop {
         match encoder.restart_isr() {
             Ok(_) => {}
@@ -123,8 +120,8 @@ pub fn init_rotary_encoder(
     let encoder = RotaryEncoder::new(pin_a, pin_b, LatchMode::TWO3, (-7, 0));
 
     std::thread::Builder::new()
-        .name("encoder_event_interface".into())
+        .name("encoder_task".into())
         .stack_size(32 * 100)
-        .spawn(move || encoder_events(encoder))
+        .spawn(move || encoder_task(encoder))
         .unwrap();
 }

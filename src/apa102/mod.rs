@@ -1,12 +1,14 @@
-use esp_idf_svc::hal::gpio::{Level, Output, Pin, PinDriver};
+pub mod interface;
+
+use esp_idf_svc::hal::gpio::{AnyOutputPin, Level, Output, PinDriver};
 use esp_idf_svc::sys::EspError;
 
 #[derive(Clone)]
 pub struct Brightness(u8);
 
-pub struct APA102<'d, 'l, P1: Pin, P2: Pin> {
-    pin_clk: PinDriver<'d, P1, Output>,
-    pin_do: PinDriver<'l, P2, Output>,
+pub struct APA102 {
+    pin_clk: PinDriver<'static, AnyOutputPin, Output>,
+    pin_do: PinDriver<'static, AnyOutputPin, Output>,
     led_states: Vec<LEDState>,
 }
 
@@ -36,11 +38,11 @@ impl Brightness {
     }
 }
 
-impl<'d, 'l, P1: Pin, P2: Pin> APA102<'d, 'l, P1, P2> {
+impl APA102 {
     pub fn new(
         num_led: u32,
-        pin_clk: PinDriver<'d, P1, Output>,
-        pin_do: PinDriver<'l, P2, Output>,
+        pin_clk: PinDriver<'static, AnyOutputPin, Output>,
+        pin_do: PinDriver<'static, AnyOutputPin, Output>,
     ) -> Self {
         let led = LEDState {
             brightness: Brightness::OFF,
@@ -62,9 +64,8 @@ impl<'d, 'l, P1: Pin, P2: Pin> APA102<'d, 'l, P1, P2> {
         self.send_led_states()
     }
 
-    pub fn set_led_array(&mut self, leds: Vec<LEDState>) -> Result<(), EspError> {
-        self.led_states = leds;
-
+    pub fn set_led_array(&mut self, led: Vec<LEDState>) -> Result<(), EspError> {
+        self.led_states = led;
         self.send_led_states()
     }
 

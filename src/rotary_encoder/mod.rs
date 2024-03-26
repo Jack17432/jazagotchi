@@ -67,15 +67,12 @@ pub(self) struct RotaryEncoder {
 /// [3] is the positions where my rotary switch detends
 /// ==> right, count up
 /// <== left,  count down
-const ENCODER_DIRECTION: [i8; 4 * 4] = [
-    0, -1, 1, 0, 
-    1, 0, 0, -1, 
-    -1, 0, 0, 1, 
-    0, 1, -1, 0];
+const ENCODER_DIRECTION: [i8; 4 * 4] = [0, -1, 1, 0, 1, 0, 0, -1, -1, 0, 0, 1, 0, 1, -1, 0];
 
 impl RotaryEncoder {
     fn poll_state(&self) -> u8 {
-        let val = level_into_u8(self.pin_a.get_level()) | level_into_u8(self.pin_b.get_level()) << 1;
+        let val =
+            level_into_u8(self.pin_a.get_level()) | level_into_u8(self.pin_b.get_level()) << 1;
         val
     }
 
@@ -113,11 +110,10 @@ impl RotaryEncoder {
         }
 
         self.data.position += ENCODER_DIRECTION[(self.prev_state | (curr_state << 2)) as usize];
-        
+
         if self.data.range.0 > self.data.position >> 1 {
             self.data.position = self.data.range.1 << 2;
-        }
-        else if self.data.range.1 < self.data.position >> 2 {
+        } else if self.data.range.1 < self.data.position >> 2 {
             self.data.position = self.data.range.0 << 1;
         }
 

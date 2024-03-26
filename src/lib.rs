@@ -1,6 +1,7 @@
 use esp_idf_svc::hal::gpio::Level;
 
 pub mod apa102;
+pub mod button_interface;
 pub mod device;
 pub mod rotary_encoder;
 pub mod tft;
@@ -19,6 +20,8 @@ pub fn level_to_bool(level: Level) -> bool {
 
 pub trait EventSet {
     fn is_none(&self) -> bool;
+    fn to_int(&self) -> u32;
+    fn to_bit(&self) -> u32;
 }
 
 pub trait Events<ES>
