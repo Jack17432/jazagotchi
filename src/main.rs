@@ -1,3 +1,4 @@
+use std::cmp::{max, min};
 use esp_idf_svc::hal::gpio::PinDriver;
 use esp_idf_svc::hal::gpio::{InputPin};
 use esp_idf_svc::hal::gpio::{OutputPin};
@@ -9,7 +10,7 @@ use jazagotchi::apa102::{Brightness, LEDState};
 use jazagotchi::button_interface::{button_init, ButtonInterface};
 use jazagotchi::device::{DevicePowerState, PowerToggle};
 use jazagotchi::rotary_encoder;
-use jazagotchi::rotary_encoder::interface::ROTARY_ENCODER;
+use jazagotchi::rotary_encoder::interface::{rotary_interface};
 
 
 fn main() -> anyhow::Result<()> {
@@ -49,13 +50,15 @@ fn main() -> anyhow::Result<()> {
 fn led_circle_thingy() {
     let mut vec: Vec<LEDState> = vec![];
 
-    let val = match ROTARY_ENCODER.read() {
-        Ok(data) => -data.get_position(),
+    let val = match rotary_interface::get_position() {
+        Ok(data) => -data,
         Err(err) => {
-            log::error!("Failed to gain read lock for encoder data, {}", err);
+            log::error!("{}", err);
             0
         }
     };
+    
+    let val = max(min(val, 7), 0);
 
     let state = ButtonInterface::get_toggle_state();
 

@@ -1,6 +1,6 @@
 pub mod interface;
 
-use super::{level_into_u8};
+use super::level_into_u8;
 use esp_idf_svc::hal::gpio::{AnyInputPin, Input, PinDriver};
 use esp_idf_svc::sys::EspError;
 use std::time::{Duration, SystemTime};

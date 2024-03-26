@@ -98,8 +98,19 @@ fn encoder_task(mut encoder: RotaryEncoder) -> ! {
     }
 }
 
-pub static ROTARY_ENCODER: Lazy<RwLock<EncoderData>> =
+static ROTARY_ENCODER: Lazy<RwLock<EncoderData>> =
     Lazy::new(|| RwLock::new(EncoderData::default()));
+
+pub mod rotary_interface {
+    use super::ROTARY_ENCODER;
+
+    pub fn get_position() -> Result<i8, String> {
+        match ROTARY_ENCODER.read() {
+            Ok(data) => Ok(data.position_ext),
+            Err(_) => Err(String::from("Failed to gain read lock for rotary encoder")),
+        }
+    }
+}
 
 fn on_pin_trigger() {
     REEvents::set(REEventSet::PinChanged);
