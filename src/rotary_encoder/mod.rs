@@ -1,7 +1,7 @@
 pub mod interface;
 
-use super::{level_into_u8, level_to_bool};
-use esp_idf_svc::hal::gpio::{AnyInputPin, Input, Pin, PinDriver};
+use super::{level_into_u8};
+use esp_idf_svc::hal::gpio::{AnyInputPin, Input, PinDriver};
 use esp_idf_svc::sys::EspError;
 use std::time::{Duration, SystemTime};
 
@@ -126,13 +126,6 @@ impl RotaryEncoder {
             LatchMode::FOUR0 | LatchMode::FOUR3 => self.data.position_ext = self.data.position >> 2,
             LatchMode::TWO3 => self.data.position_ext = self.data.position >> 1,
         };
-    }
-
-    fn get_pin_state(&self) -> (bool, bool) {
-        (
-            level_to_bool(self.pin_a.get_level()),
-            level_to_bool(self.pin_b.get_level()),
-        )
     }
 
     fn restart_isr(&mut self) -> Result<(), EspError> {

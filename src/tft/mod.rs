@@ -1,5 +1,6 @@
 use std::marker::PhantomData;
 
+#[allow(dead_code)]
 pub mod commands {
     pub type CmdID = u8;
 
@@ -114,6 +115,7 @@ pub mod commands {
     }
 }
 
+#[allow(dead_code)]
 struct TFT<S> {
     _state: PhantomData<S>,
 }

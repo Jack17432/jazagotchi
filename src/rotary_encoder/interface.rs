@@ -1,7 +1,7 @@
 use crate::rotary_encoder::{EncoderData, LatchMode, RotaryEncoder};
 use crate::{EventSet, Events};
 use esp_idf_svc::hal::delay::FreeRtos;
-use esp_idf_svc::hal::gpio::{AnyInputPin, Input, InterruptType, Pin, PinDriver};
+use esp_idf_svc::hal::gpio::{AnyInputPin, Input, InterruptType, PinDriver};
 use once_cell::sync::Lazy;
 use std::sync::atomic::{AtomicU32, Ordering};
 use std::sync::RwLock;

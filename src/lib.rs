@@ -4,7 +4,7 @@ pub mod apa102;
 pub mod button_interface;
 pub mod device;
 pub mod rotary_encoder;
-pub mod tft;
+mod tft;
 
 pub fn level_into_u8(level: Level) -> u8 {
     if level == Level::High {

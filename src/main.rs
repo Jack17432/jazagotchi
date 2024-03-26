@@ -1,17 +1,16 @@
-#[allow(dead_code)]
 use esp_idf_svc::hal::gpio::PinDriver;
-use esp_idf_svc::hal::gpio::{InputPin, Pull};
-use esp_idf_svc::hal::gpio::{InterruptType, OutputPin};
+use esp_idf_svc::hal::gpio::{InputPin};
+use esp_idf_svc::hal::gpio::{OutputPin};
 use esp_idf_svc::hal::{delay::FreeRtos, peripherals::Peripherals};
 use esp_idf_svc::log::EspLogger;
 use esp_idf_svc::sys;
 use jazagotchi::apa102::interface::{led_init, LEDInterface};
-use jazagotchi::apa102::{Brightness, LEDState, APA102};
+use jazagotchi::apa102::{Brightness, LEDState};
 use jazagotchi::button_interface::{button_init, ButtonInterface};
 use jazagotchi::device::{DevicePowerState, PowerToggle};
 use jazagotchi::rotary_encoder;
 use jazagotchi::rotary_encoder::interface::ROTARY_ENCODER;
-use std::sync::atomic::{AtomicBool, Ordering};
+
 
 fn main() -> anyhow::Result<()> {
     sys::link_patches();
