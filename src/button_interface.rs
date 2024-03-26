@@ -1,4 +1,4 @@
-use crate::{level_to_bool, EventSet, Events};
+use crate::{EventSet, Events};
 use esp_idf_svc::hal::delay::FreeRtos;
 use esp_idf_svc::hal::gpio::{Gpio0, Input, InterruptType, PinDriver, Pull};
 use once_cell::sync::Lazy;
@@ -75,44 +75,49 @@ impl Events<ButtonEventSet> for ButtonEvents {
 pub struct ButtonInterface {
     button_state: AtomicBool,
     toggle_state: AtomicBool,
-    
+
     _has_been_low: bool,
 }
 
-static BUTTON_INTERFACE: Lazy<RwLock<ButtonInterface>> = Lazy::new(|| RwLock::new(ButtonInterface::new()));
+static BUTTON_INTERFACE: Lazy<RwLock<ButtonInterface>> =
+    Lazy::new(|| RwLock::new(ButtonInterface::new()));
 
 impl ButtonInterface {
     fn new() -> Self {
         Self {
             button_state: AtomicBool::new(false),
             toggle_state: AtomicBool::new(false),
-            _has_been_low: false
+            _has_been_low: false,
         }
     }
-    
+
     fn update_button(button_state: bool) {
-        let interface = BUTTON_INTERFACE.write().expect("Failed to gain write lock on led update");
-        interface.button_state.store(button_state, Ordering::Relaxed); 
-        
+        let interface = BUTTON_INTERFACE
+            .write()
+            .expect("Failed to gain write lock on led update");
+        interface
+            .button_state
+            .store(button_state, Ordering::Relaxed);
+
         Self::update_toggle(interface);
-    } 
-    
+    }
+
     fn update_toggle(mut interface: RwLockWriteGuard<ButtonInterface>) {
         if interface.button_state.load(Ordering::Relaxed) && interface._has_been_low {
             interface._has_been_low = false;
             interface.toggle_state.fetch_xor(true, Ordering::Relaxed);
-        } 
-        else if !interface.button_state.load(Ordering::Relaxed) {
+        } else if !interface.button_state.load(Ordering::Relaxed) {
             interface._has_been_low = true;
         }
     }
-    
+
     pub fn get_toggle_state() -> bool {
-        let interface = BUTTON_INTERFACE.read().expect("Failed to gain read for button interface");
+        let interface = BUTTON_INTERFACE
+            .read()
+            .expect("Failed to gain read for button interface");
         interface.toggle_state.load(Ordering::Relaxed)
     }
 }
-
 
 fn button_task(mut button: PinDriver<'static, Gpio0, Input>) -> ! {
     loop {

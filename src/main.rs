@@ -57,9 +57,9 @@ fn led_circle_thingy() {
             0
         }
     };
-    
+
     let state = ButtonInterface::get_toggle_state();
-    
+
     for _ in 0..val {
         vec.push(LEDState {
             brightness: Brightness::MAX,
@@ -78,7 +78,7 @@ fn led_circle_thingy() {
     }
 
     match LEDInterface::set_led_vec(vec) {
-        Ok(_) => {},
+        Ok(_) => {}
         Err(err) => log::error!("{}", err),
     };
 }
