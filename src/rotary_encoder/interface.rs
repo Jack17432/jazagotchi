@@ -116,7 +116,7 @@ fn on_pin_trigger() {
     REEvents::set(REEventSet::PinChanged);
 }
 
-pub fn init_rotary_encoder(
+pub fn rotary_encoder_init(
     mut pin_a: PinDriver<'static, AnyInputPin, Input>,
     mut pin_b: PinDriver<'static, AnyInputPin, Input>,
 ) {
