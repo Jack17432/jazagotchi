@@ -124,7 +124,7 @@ pub enum Orientation {
 }
 
 #[allow(dead_code)]
-struct ST7789 {
+pub struct ST7789 {
     display_interface: DisplaySpiInterface,
     rst: PinDriver<'static, AnyOutputPin, Output>, // Reset pin
     bl: PinDriver<'static, AnyOutputPin, Output>,  // Backlight
@@ -154,6 +154,8 @@ impl ST7789 {
 
         lcd.startup_sequence();
         lcd.set_orientation(orientation);
+        lcd.set_tearing_effect(TearingEffect::Vertical);
+        lcd.clear(Rgb565::BLACK).unwrap();
         lcd
     }
 
@@ -246,6 +248,20 @@ impl ST7789 {
             .send_data_u8(&(start_y + DISPLAY_OFFSET_Y).to_be_bytes());
         self.display_interface
             .send_data_u8(&(end_y + DISPLAY_OFFSET_Y).to_be_bytes());
+    }
+
+    pub fn set_tearing_effect(&mut self, tearing_effect: TearingEffect) {
+        match tearing_effect {
+            TearingEffect::Off => self.display_interface.send_command(ST7789Instructions::TEOFF),
+            TearingEffect::Vertical => {
+                self.display_interface.send_command(ST7789Instructions::TEON);
+                self.display_interface.send_data_u8(&[0]);
+            }
+            TearingEffect::HorizontalAndVertical => {
+                self.display_interface.send_command(ST7789Instructions::TEON);
+                self.display_interface.send_data_u8(&[1]);
+            }
+        }
     }
 }
 
@@ -397,42 +413,14 @@ impl DrawTarget for ST7789 {
     }
 }
 
-fn tft_task(mut lcd: ST7789) -> ! {
-    let circle1 =
-        Circle::new(Point::new(0, 0), 64).into_styled(PrimitiveStyle::with_fill(Rgb565::RED));
-    let circle2 = Circle::new(Point::new(64, 64), 64)
-        .into_styled(PrimitiveStyle::with_stroke(Rgb565::GREEN, 1));
-
-    let blue_with_red_outline = PrimitiveStyleBuilder::new()
-        .fill_color(Rgb565::BLUE)
-        .stroke_color(Rgb565::RED)
-        .stroke_width(1) // > 1 is not currently supported in embedded-graphics on triangles
-        .build();
-    let triangle = Triangle::new(
-        Point::new(40, 120),
-        Point::new(200, 170),
-        Point::new(140, 120),
-    )
-    .into_styled(blue_with_red_outline);
-
-    let line = Line::new(
-        Point::new(0, 0),
-        Point::new(lcd.size_x as i32, lcd.size_y as i32),
-    )
-    .into_styled(blue_with_red_outline);
-
-    lcd.clear(Rgb565::BLACK).unwrap();
-    circle1.draw(&mut lcd).unwrap();
-    circle2.draw(&mut lcd).unwrap();
-    triangle.draw(&mut lcd).unwrap();
-    line.draw(&mut lcd).unwrap();
-
+fn tft_task<APP: App>(mut lcd: ST7789, mut app: Box<APP>) -> ! {
     loop {
-        FreeRtos::delay_ms(5000);
+        app.update(&mut lcd);
+        FreeRtos::delay_ms(1);
     }
 }
 
-pub fn tft_init<SPI>(
+pub fn tft_init<SPI, APP>(
     spi: impl Peripheral<P = SPI> + 'static,
     clk: AnyOutputPin,
     sdo: AnyOutputPin,
@@ -440,8 +428,10 @@ pub fn tft_init<SPI>(
     bl: AnyOutputPin,
     dc: AnyOutputPin,
     rst: AnyOutputPin,
+    app: Box<APP>,
 ) where
     SPI: SpiAnyPins,
+    APP: 'static + App + Send,
 {
     let spi_drv = SpiDriver::new(spi, clk, sdo, None::<AnyIOPin>, &SpiDriverConfig::new()).unwrap();
 
@@ -459,6 +449,10 @@ pub fn tft_init<SPI>(
     std::thread::Builder::new()
         .name("tft_task".into())
         .stack_size(32 * 300)
-        .spawn(move || tft_task(lcd))
+        .spawn(move || tft_task(lcd, app))
         .unwrap();
+}
+
+pub trait App {
+    fn update(&mut self, display: &mut ST7789);
 }
