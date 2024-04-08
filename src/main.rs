@@ -53,8 +53,6 @@ fn main() -> anyhow::Result<()> {
         let lcd_sdo = peripherals.pins.gpio11.downgrade_output();
         let lcd_rst = peripherals.pins.gpio9.downgrade_output();
 
-        let app = TestApp {counter: 0};
-
         tft_init(
             peripherals.spi2,
             lcd_clk,
@@ -63,29 +61,37 @@ fn main() -> anyhow::Result<()> {
             lcd_bl,
             lcd_dc,
             lcd_rst,
-            Box::new(app),
+            Box::new(|| Box::new(TestApp { counter: 0 })),
         );
     }
-    loop {
-        led_circle_thingy();
 
+    loop {
         FreeRtos::delay_ms(10);
     }
 }
 
 struct TestApp {
-    counter: u8
+    counter: u8,
 }
 
 impl App for TestApp {
     fn update(&mut self, display: &mut ST7789) {
-        let circle1 =
-            Circle::new(Point::new(self.counter as i32, self.counter as i32), 64).into_styled(PrimitiveStyle::with_fill(Rgb565::RED));
-        display.fill_solid(&Rectangle::with_corners(circle1.fill_area().top_left - Point::new(1, 1),
-                                                    Point::new(circle1.fill_area().top_left.x + circle1.fill_area().diameter as i32,
-                                                               circle1.fill_area().top_left.y + circle1.fill_area().diameter as i32)),
-        Rgb565::BLACK).unwrap();
+        led_circle_thingy();
 
+        let circle1 = Circle::new(Point::new(self.counter as i32, self.counter as i32), 64)
+            .into_styled(PrimitiveStyle::with_fill(Rgb565::RED));
+        display
+            .fill_solid(
+                &Rectangle::with_corners(
+                    circle1.fill_area().top_left - Point::new(1, 1),
+                    Point::new(
+                        circle1.fill_area().top_left.x + circle1.fill_area().diameter as i32,
+                        circle1.fill_area().top_left.y + circle1.fill_area().diameter as i32,
+                    ),
+                ),
+                Rgb565::BLACK,
+            )
+            .unwrap();
 
         let val = match rotary_interface::get_position() {
             Ok(data) => -data,
@@ -94,9 +100,9 @@ impl App for TestApp {
                 0
             }
         };
-        
+
         self.counter = ((self.counter as i8 + val) % 100) as u8;
-        
+
         circle1.draw(display).unwrap();
     }
 }

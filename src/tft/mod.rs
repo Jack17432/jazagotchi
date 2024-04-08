@@ -252,13 +252,17 @@ impl ST7789 {
 
     pub fn set_tearing_effect(&mut self, tearing_effect: TearingEffect) {
         match tearing_effect {
-            TearingEffect::Off => self.display_interface.send_command(ST7789Instructions::TEOFF),
+            TearingEffect::Off => self
+                .display_interface
+                .send_command(ST7789Instructions::TEOFF),
             TearingEffect::Vertical => {
-                self.display_interface.send_command(ST7789Instructions::TEON);
+                self.display_interface
+                    .send_command(ST7789Instructions::TEON);
                 self.display_interface.send_data_u8(&[0]);
             }
             TearingEffect::HorizontalAndVertical => {
-                self.display_interface.send_command(ST7789Instructions::TEON);
+                self.display_interface
+                    .send_command(ST7789Instructions::TEON);
                 self.display_interface.send_data_u8(&[1]);
             }
         }
@@ -413,14 +417,16 @@ impl DrawTarget for ST7789 {
     }
 }
 
-fn tft_task<APP: App>(mut lcd: ST7789, mut app: Box<APP>) -> ! {
+fn tft_task(mut lcd: ST7789, mut app: Box<dyn App>) -> ! {
     loop {
         app.update(&mut lcd);
-        FreeRtos::delay_ms(1);
+        FreeRtos::delay_ms(5);
     }
 }
 
-pub fn tft_init<SPI, APP>(
+pub type AppSpawner = Box<dyn FnOnce() -> Box<dyn App + Send>>;
+
+pub fn tft_init<SPI>(
     spi: impl Peripheral<P = SPI> + 'static,
     clk: AnyOutputPin,
     sdo: AnyOutputPin,
@@ -428,10 +434,9 @@ pub fn tft_init<SPI, APP>(
     bl: AnyOutputPin,
     dc: AnyOutputPin,
     rst: AnyOutputPin,
-    app: Box<APP>,
+    app_spawner: AppSpawner,
 ) where
     SPI: SpiAnyPins,
-    APP: 'static + App + Send,
 {
     let spi_drv = SpiDriver::new(spi, clk, sdo, None::<AnyIOPin>, &SpiDriverConfig::new()).unwrap();
 
@@ -445,6 +450,7 @@ pub fn tft_init<SPI, APP>(
     let rst = PinDriver::output(rst).unwrap();
     let bl = PinDriver::output(bl).unwrap();
     let lcd = ST7789::init(display_interface, rst, bl, 320, 170, Orientation::Landscape);
+    let app = app_spawner();
 
     std::thread::Builder::new()
         .name("tft_task".into())
